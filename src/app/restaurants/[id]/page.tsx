@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { unstable_noStore as noStore } from 'next/cache'
 import AddDishForm from '@/components/AddDishForm'
 import DishCard from '@/components/DishCard'
 import RestaurantHeader from '@/components/RestaurantHeader'
@@ -38,6 +39,7 @@ type RestaurantDish = {
   dish_photos:
     | {
         id: string
+        dish_id: string
         storage_path: string
         caption: string | null
         is_featured: boolean
@@ -56,6 +58,8 @@ type RestaurantDetail = {
 }
 
 export default async function RestaurantDetailPage({ params }: RestaurantPageProps) {
+  noStore()
+
   const { data, error } = await supabase
     .from('restaurants')
     .select('id, name, city, address, created_by')
@@ -73,7 +77,10 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
     .eq('restaurant_id', restaurant.id)
     .order('created_at', { ascending: false })
 
-  const dishIds = (dishesData ?? []).map((dish) => dish.id)
+  const uniqueDishes = Array.from(
+    new Map((dishesData ?? []).map((dish) => [dish.id, dish])).values(),
+  )
+  const dishIds = uniqueDishes.map((dish) => dish.id)
 
   const { data: reviewsData } =
     dishIds.length > 0
@@ -91,16 +98,9 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
           .in('dish_id', dishIds)
       : { data: [] as RestaurantDish['dish_photos'] | null }
 
-  const { data: dishRatingsData } =
-    dishIds.length > 0
-      ? await supabase
-          .from('dishes_with_rating')
-          .select('id, avg_rating, review_count')
-          .in('id', dishIds)
-      : { data: [] as { id: string; avg_rating: number | null; review_count: number }[] | null }
-
   const reviewsByDish = new Map<string, RestaurantReview[]>()
   ;(reviewsData ?? []).forEach((review) => {
+    if (!review.dish_id) return
     const list = reviewsByDish.get(review.dish_id) ?? []
     list.push(review as RestaurantReview)
     reviewsByDish.set(review.dish_id, list)
@@ -114,14 +114,20 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
   })
 
   const ratingsByDish = new Map<string, { avg_rating: number | null; review_count: number }>()
-  ;(dishRatingsData ?? []).forEach((row) => {
-    ratingsByDish.set(row.id, {
-      avg_rating: row.avg_rating,
-      review_count: row.review_count ?? 0,
+  ;(reviewsData ?? []).forEach((review) => {
+    if (!review.dish_id) return
+    const current = ratingsByDish.get(review.dish_id) ?? { avg_rating: null, review_count: 0 }
+    const currentTotal = (current.avg_rating ?? 0) * current.review_count
+    const nextCount = current.review_count + 1
+    const nextAvg = (currentTotal + review.rating) / nextCount
+
+    ratingsByDish.set(review.dish_id, {
+      avg_rating: Number(nextAvg.toFixed(1)),
+      review_count: nextCount,
     })
   })
 
-  const dishes = (dishesData ?? []).map((dish) => ({
+  const dishes = uniqueDishes.map((dish) => ({
     ...dish,
     avg_rating: ratingsByDish.get(dish.id)?.avg_rating ?? null,
     review_count: ratingsByDish.get(dish.id)?.review_count ?? 0,

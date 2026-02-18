@@ -1,11 +1,12 @@
 'use client'
 
+import { Suspense } from 'react'
 import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -77,5 +78,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </section>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-600">Cargando...</section>}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

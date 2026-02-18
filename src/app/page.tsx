@@ -82,6 +82,7 @@ export default function HomePage() {
       const dishIds = dishes.map((dish) => dish.id)
       const dishToRestaurant = new Map<string, string>()
       dishes.forEach((dish) => {
+        if (!dish.restaurant_id) return
         dishToRestaurant.set(dish.id, dish.restaurant_id)
       })
 
@@ -98,6 +99,7 @@ export default function HomePage() {
 
       const totalsByRestaurant = new Map<string, { total: number; count: number }>()
       ;(reviewsData ?? []).forEach((review) => {
+        if (!review.dish_id) return
         const restaurantId = dishToRestaurant.get(review.dish_id)
         if (!restaurantId) return
 

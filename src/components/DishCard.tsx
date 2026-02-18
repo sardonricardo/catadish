@@ -2,10 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Flame, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Droplets, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ensureCurrentUserProfile } from '@/lib/profile'
 import ConfirmModal from '@/components/ConfirmModal'
+import type { DishCategory } from '@/lib/database.types'
 
 type DishReview = {
   id: string
@@ -40,15 +41,18 @@ interface DishCardProps {
   initiallyExpanded?: boolean
 }
 
+const dishCategories: DishCategory[] = ['entrante', 'principal', 'postre', 'bebida']
+
 export default function DishCard({ dish, initiallyExpanded = false }: DishCardProps) {
   const router = useRouter()
+  const [isDeleted, setIsDeleted] = useState(false)
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded)
   const [isEditingDish, setIsEditingDish] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [dishName, setDishName] = useState(dish.name)
   const [dishDescription, setDishDescription] = useState(dish.description ?? '')
   const [dishPrice, setDishPrice] = useState(dish.price != null ? String(dish.price) : '')
-  const [dishCategory, setDishCategory] = useState(dish.category ?? '')
+  const [dishCategory, setDishCategory] = useState<DishCategory | ''>((dish.category as DishCategory | null) ?? '')
   const [editingDishLoading, setEditingDishLoading] = useState(false)
   const [deletingDishLoading, setDeletingDishLoading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -245,7 +249,20 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     setError(null)
     setDeletingDishLoading(true)
 
-    const { data: deletedRows, error: deleteError } = await supabase.from('dishes').delete().eq('id', dish.id).select('id')
+    const { user, error: profileError } = await ensureCurrentUserProfile()
+    if (!user) {
+      setError(profileError ?? 'Debes iniciar sesión para borrar platos.')
+      setDeletingDishLoading(false)
+      router.push('/auth/login')
+      return
+    }
+
+    const { data: deletedRows, error: deleteError } = await supabase
+      .from('dishes')
+      .delete()
+      .eq('id', dish.id)
+      .eq('created_by', user.id)
+      .select('id')
 
     if (deleteError) {
       setError(deleteError.message)
@@ -261,7 +278,12 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
     setDeletingDishLoading(false)
     setShowDeleteModal(false)
+    setIsDeleted(true)
     router.refresh()
+  }
+
+  if (isDeleted) {
+    return null
   }
 
   return (
@@ -280,7 +302,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
         <div className="flex items-center gap-2 text-right">
           <p className="text-sm font-semibold text-slate-700">{dish.price != null ? `${dish.price}€` : 'Precio N/A'}</p>
           <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
-            <Flame className="h-3.5 w-3.5 fill-current" />
+            <Droplets className="h-3.5 w-3.5 fill-current" />
             <span>{average ?? 'Sin notas'}</span>
             <span>({reviewCount})</span>
           </p>
@@ -349,11 +371,18 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
               </label>
               <label className="block text-sm font-medium text-slate-700">
                 Categoría
-                <input
+                <select
                   value={dishCategory}
-                  onChange={(event) => setDishCategory(event.target.value)}
+                  onChange={(event) => setDishCategory(event.target.value as DishCategory | '')}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-                />
+                >
+                  <option value="">Sin categoría</option>
+                  {dishCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
             <div className="flex items-center gap-2">
@@ -370,7 +399,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
                   setDishName(dish.name)
                   setDishDescription(dish.description ?? '')
                   setDishPrice(dish.price != null ? String(dish.price) : '')
-                  setDishCategory(dish.category ?? '')
+                  setDishCategory((dish.category as DishCategory | null) ?? '')
                   setIsEditingDish(false)
                 }}
                 className="rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
@@ -455,7 +484,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
                     onClick={() => setRating(value)}
                     className="rounded-md p-1 transition hover:scale-110"
                   >
-                    <Flame
+                    <Droplets
                       className={`h-6 w-6 ${active ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}`}
                     />
                   </button>
