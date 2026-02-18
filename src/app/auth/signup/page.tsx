@@ -54,7 +54,7 @@ function SignupPageContent() {
 
     setNotice('Cuenta lista. Bienvenida/o al club del antojo.')
     const nextPath = searchParams.get('next')
-    router.push(nextPath || '/')
+    router.push(nextPath || '/restaurants')
     router.refresh()
   }
 

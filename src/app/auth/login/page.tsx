@@ -28,7 +28,7 @@ function LoginPageContent() {
     }
 
     const nextPath = searchParams.get('next')
-    router.push(nextPath || '/')
+    router.push(nextPath || '/restaurants')
     router.refresh()
   }
 

@@ -120,7 +120,7 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
       return
     }
 
-    router.push('/')
+    router.push('/restaurants')
     router.refresh()
   }
 

@@ -42,7 +42,7 @@ export default function AuthNav() {
           <Link href="/groups" className="hover:text-slate-900">
             Grupos
           </Link>
-          <Link href="/" className="hover:text-slate-900">
+          <Link href="/restaurants" className="hover:text-slate-900">
             Restaurantes
           </Link>
         </>
