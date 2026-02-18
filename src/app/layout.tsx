@@ -5,7 +5,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Catadish',
-  description: 'Placer gastronómico en cada bocado. Guarda, comparte y puntúa platos que encienden.',
+  description: 'Tu diario de antojos intensos. Guarda, comparte y puntúa platos que te ponen a mil.',
 }
 
 export default function RootLayout({

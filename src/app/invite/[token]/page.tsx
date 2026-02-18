@@ -36,7 +36,7 @@ export default function InviteTokenPage() {
 
       if (!user) {
         setLoading(false)
-        setError(userError ?? 'Necesitas una cuenta para unirte al grupo.')
+        setError(userError ?? 'Necesitas una cuenta para entrar al círculo.')
         router.push(`/auth/signup?next=${encodeURIComponent(`/invite/${token}`)}`)
         return
       }
@@ -48,7 +48,7 @@ export default function InviteTokenPage() {
         .single()
 
       if (inviteError || !inviteData) {
-        setError(inviteError?.message ?? 'Invitación no válida.')
+        setError(inviteError?.message ?? 'Invite no válido.')
         setLoading(false)
         return
       }
@@ -62,7 +62,7 @@ export default function InviteTokenPage() {
         .single()
 
       if (groupError || !groupData) {
-        setError(groupError?.message ?? 'No se encontró el grupo.')
+        setError(groupError?.message ?? 'No se encontró el círculo.')
         setLoading(false)
         return
       }
@@ -90,7 +90,7 @@ export default function InviteTokenPage() {
     }
 
     const joinedGroupId = data as string
-    setSuccess('Te has unido al grupo correctamente.')
+    setSuccess('Ya estás dentro del círculo.')
     setJoining(false)
     router.push(`/groups/${joinedGroupId}`)
   }
@@ -98,18 +98,18 @@ export default function InviteTokenPage() {
   return (
     <section className="mx-auto max-w-2xl space-y-5">
       <Link href="/groups" className="text-sm font-semibold text-slate-700 underline">
-        Volver a grupos
+        Volver a círculos
       </Link>
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-3">
-        <h1 className="text-2xl font-bold text-slate-900">Invitación a grupo</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Invite a círculo</h1>
 
-        {loading && <p className="text-sm text-slate-600">Validando invitación...</p>}
+        {loading && <p className="text-sm text-slate-600">Validando invite...</p>}
 
         {!loading && group && (
           <>
             <p className="text-slate-700">
-              Has sido invitada/o a unirte a <span className="font-semibold">{group.name}</span>.
+              Te han invitado a entrar en <span className="font-semibold">{group.name}</span>.
             </p>
             <button
               type="button"
@@ -117,7 +117,7 @@ export default function InviteTokenPage() {
               disabled={joining}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
             >
-              {joining ? 'Uniendo...' : 'Unirme al grupo'}
+              {joining ? 'Entrando...' : 'Entrar al círculo'}
             </button>
           </>
         )}

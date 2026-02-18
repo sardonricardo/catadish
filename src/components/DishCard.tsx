@@ -2,16 +2,21 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Droplets, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Flame, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ensureCurrentUserProfile } from '@/lib/profile'
 import ConfirmModal from '@/components/ConfirmModal'
 import type { DishCategory } from '@/lib/database.types'
+import { getSensualRatingLabel } from '@/lib/rating'
 
 type DishReview = {
   id: string
   user_id: string | null
   rating: number
+  flavor_rating: number | null
+  texture_rating: number | null
+  presentation_rating: number | null
+  value_rating: number | null
   comment: string | null
   created_at: string | null
   profiles: {
@@ -43,6 +48,16 @@ interface DishCardProps {
 
 const dishCategories: DishCategory[] = ['entrante', 'principal', 'postre', 'bebida']
 
+function getHeatColor(step: number) {
+  const t = (step - 1) / 4
+  const start = { r: 56, g: 189, b: 248 } // sky-400
+  const end = { r: 244, g: 63, b: 94 } // rose-500
+  const r = Math.round(start.r + (end.r - start.r) * t)
+  const g = Math.round(start.g + (end.g - start.g) * t)
+  const b = Math.round(start.b + (end.b - start.b) * t)
+  return `rgb(${r} ${g} ${b})`
+}
+
 export default function DishCard({ dish, initiallyExpanded = false }: DishCardProps) {
   const router = useRouter()
   const [isDeleted, setIsDeleted] = useState(false)
@@ -56,14 +71,17 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
   const [editingDishLoading, setEditingDishLoading] = useState(false)
   const [deletingDishLoading, setDeletingDishLoading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [rating, setRating] = useState(5)
+  const [flavorRating, setFlavorRating] = useState(3)
+  const [textureRating, setTextureRating] = useState(3)
+  const [presentationRating, setPresentationRating] = useState(3)
+  const [valueRating, setValueRating] = useState(3)
   const [comment, setComment] = useState('')
   const [photoCaption, setPhotoCaption] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const ratingLabels = ['Muy flojo', 'Aceptable', 'Rico', 'Muy top', 'Orgásmico']
+  const reviewAverage = Number(((flavorRating + textureRating + presentationRating + valueRating) / 4).toFixed(1))
 
   const computedAverage = useMemo(() => {
     if (!dish.reviews.length) {
@@ -77,6 +95,8 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     dish.avg_rating != null
       ? Number(dish.avg_rating).toFixed(1)
       : computedAverage
+  const averageValue = average != null ? Number(average) : null
+  const isHotDish = averageValue != null && averageValue > 4
   const reviewCount = dish.review_count ?? dish.reviews.length
 
   const orderedPhotos = useMemo(() => {
@@ -106,7 +126,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
       const { data: ownReview, error: ownReviewError } = await supabase
         .from('reviews')
-        .select('rating, comment')
+        .select('rating, flavor_rating, texture_rating, presentation_rating, value_rating, comment')
         .eq('dish_id', dish.id)
         .eq('user_id', userId)
         .maybeSingle()
@@ -114,7 +134,10 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
       if (ownReviewError) return
 
       if (ownReview) {
-        setRating(ownReview.rating)
+        setFlavorRating(ownReview.flavor_rating ?? ownReview.rating)
+        setTextureRating(ownReview.texture_rating ?? ownReview.rating)
+        setPresentationRating(ownReview.presentation_rating ?? ownReview.rating)
+        setValueRating(ownReview.value_rating ?? ownReview.rating)
         setComment(ownReview.comment ?? '')
       }
     }
@@ -130,21 +153,27 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     const { user, error: profileError } = await ensureCurrentUserProfile()
 
     if (!user) {
-      setError(profileError ?? 'Debes iniciar sesión para reseñar.')
+      setError(profileError ?? 'Inicia sesión para dejar tu nota.')
       setLoading(false)
       router.push('/auth/login')
       return
     }
 
+    const reviewPayload = {
+      dish_id: dish.id,
+      user_id: user.id,
+      rating: reviewAverage,
+      flavor_rating: flavorRating,
+      texture_rating: textureRating,
+      presentation_rating: presentationRating,
+      value_rating: valueRating,
+      comment: comment || null,
+    }
+
     const { error: upsertError } = await supabase
       .from('reviews')
       .upsert(
-        {
-          dish_id: dish.id,
-          user_id: user.id,
-          rating,
-          comment: comment || null,
-        },
+        reviewPayload,
         { onConflict: 'dish_id,user_id' },
       )
 
@@ -164,7 +193,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     setError(null)
 
     if (!photoFile) {
-      setError('Selecciona una foto antes de subir.')
+      setError('Elige una foto antes de subirla.')
       return
     }
 
@@ -172,7 +201,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
     const { user, error: profileError } = await ensureCurrentUserProfile()
     if (!user) {
-      setError(profileError ?? 'Debes iniciar sesión para subir fotos.')
+      setError(profileError ?? 'Inicia sesión para subir fotos.')
       setUploadingPhoto(false)
       router.push('/auth/login')
       return
@@ -251,7 +280,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
     const { user, error: profileError } = await ensureCurrentUserProfile()
     if (!user) {
-      setError(profileError ?? 'Debes iniciar sesión para borrar platos.')
+      setError(profileError ?? 'Inicia sesión para eliminar platos.')
       setDeletingDishLoading(false)
       router.push('/auth/login')
       return
@@ -271,7 +300,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     }
 
     if (!deletedRows || deletedRows.length === 0) {
-      setError('No tienes permisos para borrar este plato (RLS).')
+      setError('No tienes permisos para eliminar este plato (RLS).')
       setDeletingDishLoading(false)
       return
     }
@@ -301,10 +330,13 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
         <div className="flex items-center gap-2 text-right">
           <p className="text-sm font-semibold text-slate-700">{dish.price != null ? `${dish.price}€` : 'Precio N/A'}</p>
-          <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
-            <Droplets className="h-3.5 w-3.5 fill-current" />
-            <span>{average ?? 'Sin notas'}</span>
+          <p
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${isHotDish ? 'border border-rose-300 bg-rose-50 text-rose-700' : 'heat-badge'}`}
+          >
+            <Flame className="h-3.5 w-3.5 fill-current" />
+            <span>{average ?? 'Sin chispa'}</span>
             <span>({reviewCount})</span>
+            {isHotDish && <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">Caliente</span>}
           </p>
           <p className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
             <span>{isExpanded ? 'Ocultar' : 'Ver detalle'}</span>
@@ -323,7 +355,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
                 className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
               >
                 <Pencil className="h-4 w-4" />
-                Editar plato
+                Editar
               </button>
             )}
             <button
@@ -332,7 +364,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
               className="inline-flex items-center gap-1 rounded-md border border-rose-300 px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50"
             >
               <Trash2 className="h-4 w-4" />
-              Borrar plato
+              Eliminar
             </button>
           </div>
         )}
@@ -411,21 +443,37 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
         )}
 
         <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-slate-700">Reseñas con hambre</h4>
-        {dish.reviews.length === 0 && <p className="text-sm text-slate-500">Todavía no hay reseñas.</p>}
+        <h4 className="text-sm font-semibold text-slate-700">Notas del placer</h4>
+        {dish.reviews.length === 0 && <p className="text-sm text-slate-500">Aún no hay notas.</p>}
         {dish.reviews.map((review) => (
           <div key={review.id} className="rounded-lg bg-slate-50 p-3 text-sm">
             <p className="font-medium text-slate-800">
-              {review.profiles?.username ?? 'Usuario'} · {review.rating}/5
+              {review.profiles?.username ?? 'Usuario'} · {Number(review.rating).toFixed(1)}/5
             </p>
+            {(review.flavor_rating || review.texture_rating || review.presentation_rating || review.value_rating) && (
+              <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                <p>
+                  Sabor {review.flavor_rating ?? '-'}{review.flavor_rating ? ` · ${getSensualRatingLabel(review.flavor_rating)}` : ''}
+                </p>
+                <p>
+                  Textura {review.texture_rating ?? '-'}{review.texture_rating ? ` · ${getSensualRatingLabel(review.texture_rating)}` : ''}
+                </p>
+                <p>
+                  Presentación {review.presentation_rating ?? '-'}{review.presentation_rating ? ` · ${getSensualRatingLabel(review.presentation_rating)}` : ''}
+                </p>
+                <p>
+                  Calidad/precio {review.value_rating ?? '-'}{review.value_rating ? ` · ${getSensualRatingLabel(review.value_rating)}` : ''}
+                </p>
+              </div>
+            )}
             {review.comment && <p className="mt-1 text-slate-600">{review.comment}</p>}
           </div>
         ))}
       </div>
 
       <div className="space-y-2 border-t border-slate-200 pt-4">
-        <h4 className="text-sm font-semibold text-slate-700">Food shots del plato</h4>
-        {orderedPhotos.length === 0 && <p className="text-sm text-slate-500">Todavía no hay fotos.</p>}
+        <h4 className="text-sm font-semibold text-slate-700">Shots del plato</h4>
+        {orderedPhotos.length === 0 && <p className="text-sm text-slate-500">Aún no hay fotos.</p>}
         {orderedPhotos.length > 0 && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {orderedPhotos.map((photo) => {
@@ -442,7 +490,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
       </div>
 
       <form onSubmit={handlePhotoUpload} className="space-y-2 border-t border-slate-200 pt-4">
-        <h4 className="text-sm font-semibold text-slate-700">Subir food shot</h4>
+        <h4 className="text-sm font-semibold text-slate-700">Subir shot</h4>
         <input
           type="file"
           accept="image/*"
@@ -451,7 +499,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
           className="block w-full text-sm text-slate-600"
         />
         <label className="block text-sm font-medium text-slate-700">
-          Caption
+          Texto
           <input
             type="text"
             value={photoCaption}
@@ -465,46 +513,69 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
           disabled={uploadingPhoto}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+          {uploadingPhoto ? 'Subiendo...' : 'Publicar foto'}
         </button>
       </form>
 
       <form onSubmit={handleReviewSubmit} className="space-y-2 border-t border-slate-200 pt-4">
         <label className="block text-sm font-medium text-slate-700">
-          Tu puntuación caliente
+          Tu termómetro del placer
           <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((value) => {
-                const active = value <= rating
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-label={`${value} de 5`}
-                    onClick={() => setRating(value)}
-                    className="rounded-md p-1 transition hover:scale-110"
-                  >
-                    <Droplets
-                      className={`h-6 w-6 ${active ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}`}
-                    />
-                  </button>
-                )
-              })}
+            <div className="space-y-2">
+              {[
+                { label: 'Sabor', value: flavorRating, setter: setFlavorRating },
+                { label: 'Textura', value: textureRating, setter: setTextureRating },
+                { label: 'Presentación', value: presentationRating, setter: setPresentationRating },
+                { label: 'Calidad/precio', value: valueRating, setter: setValueRating },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-slate-700">{item.label}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((value) => {
+                        const active = value <= item.value
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-label={`${item.label} ${value} de 5`}
+                            onClick={() => item.setter(value)}
+                            className="rounded-md p-1 transition hover:scale-110"
+                          >
+                            <Flame
+                              className={`h-5 w-5 fill-current ${active ? 'drop-shadow-[0_2px_6px_rgba(239,68,68,0.35)]' : 'text-slate-300'}`}
+                              style={active ? { color: getHeatColor(value) } : undefined}
+                            />
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {item.value}/5 · {getSensualRatingLabel(item.value)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="mt-2 text-xs font-semibold text-slate-600">{rating}/5 · {ratingLabels[rating - 1]}</p>
+            <p className="mt-2 text-xs font-semibold text-slate-600">
+              {reviewAverage}/5 · {getSensualRatingLabel(reviewAverage)}
+            </p>
           </div>
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
-          Comentario
-          <textarea
-            rows={2}
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            placeholder="Opcional"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
-          />
-        </label>
+        <details className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-slate-700">Confesión extra (opcional)</summary>
+          <label className="mt-2 block text-sm font-medium text-slate-700">
+            Comentario picante
+            <textarea
+              rows={2}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              placeholder="Opcional"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
+            />
+          </label>
+        </details>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
@@ -513,16 +584,16 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {loading ? 'Guardando...' : 'Guardar reseña'}
+          {loading ? 'Guardando...' : 'Guardar nota'}
         </button>
       </form>
       </div>}
 
       <ConfirmModal
         open={showDeleteModal}
-        title="Borrar plato"
-        description="Se eliminarán también sus reseñas y fotos. Esta acción no se puede deshacer."
-        confirmLabel="Sí, borrar plato"
+        title="Eliminar plato"
+        description="Se borrarán también sus notas y fotos. Esta acción no se puede deshacer."
+        confirmLabel="Sí, eliminar plato"
         cancelLabel="Cancelar"
         loading={deletingDishLoading}
         onCancel={() => setShowDeleteModal(false)}

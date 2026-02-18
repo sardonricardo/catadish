@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import ConfirmModal from '@/components/ConfirmModal'
 import { ensureCurrentUserProfile } from '@/lib/profile'
 import { supabase } from '@/lib/supabase'
+import { buildGoogleMapsLink } from '@/lib/maps'
 
 interface RestaurantHeaderProps {
   restaurant: {
@@ -54,6 +55,15 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
   const canEdit = useMemo(() => {
     return Boolean(currentUserId && restaurant.created_by && currentUserId === restaurant.created_by)
   }, [currentUserId, restaurant.created_by])
+  const mapsLink = useMemo(
+    () =>
+      buildGoogleMapsLink({
+        name,
+        address,
+        city,
+      }),
+    [name, address, city],
+  )
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -78,7 +88,7 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
     }
 
     if (!updatedRows || updatedRows.length === 0) {
-      setError('No tienes permisos para editar este restaurante (RLS).')
+      setError('No tienes permisos para editar este templo (RLS).')
       setIsSaving(false)
       return
     }
@@ -105,7 +115,7 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
     }
 
     if (!deletedRows || deletedRows.length === 0) {
-      setError('No tienes permisos para borrar este restaurante (RLS).')
+      setError('No tienes permisos para borrar este templo (RLS).')
       setIsDeleting(false)
       return
     }
@@ -134,27 +144,37 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
             <input
               value={address}
               onChange={(event) => setAddress(event.target.value)}
-              placeholder="Dirección"
+              placeholder="Dirección exacta"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-600"
             />
           </>
         ) : (
           <>
             <h1 className="text-3xl font-bold text-slate-900">{name}</h1>
-            <p className="mt-2 text-slate-600">{city || 'Sin ciudad'}</p>
-            <p className="text-slate-500">{address || 'Sin dirección'}</p>
+            <p className="mt-2 text-slate-600">{city || 'Ciudad pendiente'}</p>
+            <p className="text-slate-500">{address || 'Dirección pendiente'}</p>
           </>
         )}
 
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
+            {mapsLink && (
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-cyan-300 px-3 py-1 text-sm font-semibold text-cyan-700 hover:bg-cyan-50"
+              >
+                Abrir en Google Maps
+              </a>
+            )}
             {isEditing ? (
               <button
                 type="submit"
                 disabled={isSaving}
                 className="rounded-md bg-slate-900 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
               >
-                {isSaving ? 'Guardando...' : 'Guardar'}
+                {isSaving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             ) : (
               <button
@@ -187,7 +207,7 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
               disabled={isDeleting}
               className="rounded-md border border-rose-300 px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
             >
-              {isDeleting ? 'Borrando...' : 'Borrar'}
+              {isDeleting ? 'Borrando...' : 'Eliminar'}
             </button>
           </div>
         )}
@@ -197,9 +217,9 @@ export default function RestaurantHeader({ restaurant }: RestaurantHeaderProps) 
 
       <ConfirmModal
         open={showDeleteModal}
-        title="Borrar restaurante"
-        description="Esta acción eliminará también todos sus platos y reseñas. No se puede deshacer."
-        confirmLabel="Sí, borrar"
+        title="Eliminar templo"
+        description="Se borrarán también sus platos, fotos y reseñas. Esta acción no se puede deshacer."
+        confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
         loading={isDeleting}
         onCancel={() => setShowDeleteModal(false)}

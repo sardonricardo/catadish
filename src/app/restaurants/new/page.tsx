@@ -1,9 +1,10 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ensureCurrentUserProfile } from '@/lib/profile'
+import { buildGoogleMapsLink } from '@/lib/maps'
 
 export default function NewRestaurantPage() {
   const router = useRouter()
@@ -12,6 +13,15 @@ export default function NewRestaurantPage() {
   const [address, setAddress] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const mapsLink = useMemo(
+    () =>
+      buildGoogleMapsLink({
+        name,
+        city,
+        address,
+      }),
+    [name, city, address],
+  )
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -61,8 +71,8 @@ export default function NewRestaurantPage() {
 
   return (
     <section className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Nuevo restaurante</h1>
-      <p className="mt-1 text-sm text-slate-600">Añade un templo foodie y empieza a puntuar sus platos más adictivos.</p>
+      <h1 className="text-2xl font-bold text-slate-900">Nuevo templo del antojo</h1>
+      <p className="mt-1 text-sm text-slate-600">Guárdalo y empieza a puntuar los platos que te suben las pulsaciones.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block text-sm font-medium text-slate-700">
@@ -96,6 +106,17 @@ export default function NewRestaurantPage() {
           />
         </label>
 
+        {mapsLink && (
+          <a
+            href={mapsLink}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded-md border border-cyan-300 px-3 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-50"
+          >
+            Ver búsqueda en Google Maps
+          </a>
+        )}
+
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <button
@@ -103,7 +124,7 @@ export default function NewRestaurantPage() {
           disabled={loading}
           className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {loading ? 'Guardando...' : 'Crear restaurante'}
+          {loading ? 'Guardando templo...' : 'Crear templo'}
         </button>
       </form>
     </section>

@@ -92,11 +92,11 @@ export default function GroupsPage() {
     <section className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Grupos</h1>
-        <p className="mt-2 text-slate-600">Crea un grupo y comparte tus restaurantes con amigos.</p>
+        <p className="mt-2 text-slate-600">Crea un círculo de antojo y comparte tus templos con tu gente.</p>
       </div>
 
       <form onSubmit={handleCreateGroup} className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Crear grupo</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Crear círculo</h2>
 
         <label className="block text-sm font-medium text-slate-700">
           Nombre
@@ -125,16 +125,16 @@ export default function GroupsPage() {
           disabled={submitting}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {submitting ? 'Creando...' : 'Crear grupo'}
+          {submitting ? 'Creando...' : 'Crear círculo'}
         </button>
       </form>
 
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold text-slate-900">Tus grupos</h2>
-        {loadingGroups && <p className="text-sm text-slate-600">Cargando grupos...</p>}
+        <h2 className="text-xl font-semibold text-slate-900">Tus círculos</h2>
+        {loadingGroups && <p className="text-sm text-slate-600">Cargando círculos...</p>}
         {!loadingGroups && groups.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-600">
-            Aún no has creado grupos.
+            Aún no has creado ningún círculo.
           </div>
         )}
         <div className="grid gap-3 md:grid-cols-2">

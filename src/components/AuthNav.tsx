@@ -37,12 +37,16 @@ export default function AuthNav() {
 
   return (
     <nav className="flex items-center gap-4 text-sm font-medium text-slate-700">
-      <Link href="/groups" className="hover:text-slate-900">
-        Grupos
-      </Link>
-      <Link href="/" className="hover:text-slate-900">
-        Restaurantes
-      </Link>
+      {isAuthenticated && (
+        <>
+          <Link href="/groups" className="hover:text-slate-900">
+            Grupos
+          </Link>
+          <Link href="/" className="hover:text-slate-900">
+            Restaurantes
+          </Link>
+        </>
+      )}
 
       {isAuthenticated ? (
         <button
@@ -51,15 +55,15 @@ export default function AuthNav() {
           disabled={loadingLogout}
           className="rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:border-slate-400 hover:text-slate-900 disabled:opacity-60"
         >
-          {loadingLogout ? 'Saliendo...' : 'Logout'}
+          {loadingLogout ? 'Saliendo...' : 'Salir'}
         </button>
       ) : (
         <>
           <Link href="/auth/login" className="hover:text-slate-900">
-            Login
+            Entrar
           </Link>
           <Link href="/auth/signup" className="hover:text-slate-900">
-            Registro
+            Únete
           </Link>
         </>
       )}

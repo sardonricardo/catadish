@@ -34,8 +34,8 @@ function LoginPageContent() {
 
   return (
     <section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Iniciar sesión</h1>
-      <p className="mt-1 text-sm text-slate-600">Vuelve a tu archivo de platos brutales y reseñas con hambre real.</p>
+      <h1 className="text-2xl font-bold text-slate-900">Vuelve al antojo</h1>
+      <p className="mt-1 text-sm text-slate-600">Entra y sigue puntuando los platos que te hacen perder el control.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block text-sm font-medium text-slate-700">
@@ -67,14 +67,14 @@ function LoginPageContent() {
           disabled={loading}
           className="w-full rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {loading ? 'Entrando...' : 'Entrar'}
+          {loading ? 'Abriendo sesión...' : 'Entrar'}
         </button>
       </form>
 
       <p className="mt-4 text-sm text-slate-600">
-        ¿No tienes cuenta?{' '}
+        ¿Primera vez por aquí?{' '}
         <Link href="/auth/signup" className="font-semibold text-slate-900 underline">
-          Regístrate
+          Crear cuenta
         </Link>
       </p>
     </section>
@@ -83,7 +83,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-600">Cargando...</section>}>
+    <Suspense fallback={<section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-600">Cargando acceso...</section>}>
       <LoginPageContent />
     </Suspense>
   )

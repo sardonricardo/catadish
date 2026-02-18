@@ -35,7 +35,7 @@ function SignupPageContent() {
 
     const user = data.user
     if (!user) {
-      setNotice('Cuenta creada. Revisa tu correo para confirmar el acceso.')
+      setNotice('Cuenta creada. Revisa tu correo para activar el acceso.')
       setLoading(false)
       return
     }
@@ -52,7 +52,7 @@ function SignupPageContent() {
       return
     }
 
-    setNotice('Cuenta creada correctamente.')
+    setNotice('Cuenta lista. Bienvenida/o al club del antojo.')
     const nextPath = searchParams.get('next')
     router.push(nextPath || '/')
     router.refresh()
@@ -60,8 +60,8 @@ function SignupPageContent() {
 
   return (
     <section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Crear cuenta</h1>
-      <p className="mt-1 text-sm text-slate-600">Empieza a guardar platos que te vuelan la cabeza bocado a bocado.</p>
+      <h1 className="text-2xl font-bold text-slate-900">Activa tu perfil foodie</h1>
+      <p className="mt-1 text-sm text-slate-600">Guarda tus vicios gastronómicos y compártelos con tu gente.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block text-sm font-medium text-slate-700">
@@ -107,14 +107,14 @@ function SignupPageContent() {
           disabled={loading}
           className="w-full rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {loading ? 'Creando cuenta...' : 'Registrarme'}
+          {loading ? 'Creando perfil...' : 'Entrar al club'}
         </button>
       </form>
 
       <p className="mt-4 text-sm text-slate-600">
-        ¿Ya tienes cuenta?{' '}
+        ¿Ya tienes acceso?{' '}
         <Link href="/auth/login" className="font-semibold text-slate-900 underline">
-          Inicia sesión
+          Entrar
         </Link>
       </p>
     </section>
@@ -123,7 +123,7 @@ function SignupPageContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-600">Cargando...</section>}>
+    <Suspense fallback={<section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm text-slate-600">Cargando registro...</section>}>
       <SignupPageContent />
     </Suspense>
   )

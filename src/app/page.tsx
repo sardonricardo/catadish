@@ -134,27 +134,27 @@ export default function HomePage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Mis restaurantes</h1>
-          <p className="mt-2 text-slate-600">Tu mapa personal del placer foodie: platos que merecen repetirse.</p>
+          <p className="mt-2 text-slate-600">Tus templos del placer: donde cada bocado merece memoria.</p>
         </div>
         <Link
           href="/restaurants/new"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
-          Añadir restaurante
+          Nuevo templo
         </Link>
       </div>
 
-      {loading && <p className="text-sm text-slate-600">Cargando restaurantes...</p>}
+      {loading && <p className="text-sm text-slate-600">Preparando tus restaurantes...</p>}
 
       {error && (
         <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          Error cargando restaurantes: {error}
+          Error cargando tus templos: {error}
         </p>
       )}
 
       {!loading && !error && restaurants.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">
-          Todavía no has creado restaurantes.
+          Aún no has creado ningún templo foodie.
         </div>
       )}
 
@@ -174,12 +174,12 @@ export default function HomePage() {
                     {restaurant.avg_rating} ({restaurant.review_count})
                   </span>
                 ) : (
-                  <span>Sin notas</span>
+                  <span>Sin chispa</span>
                 )}
               </span>
             </div>
-            <p className="mt-2 text-sm text-slate-600">{restaurant.city ?? 'Sin ciudad'}</p>
-            <p className="text-sm text-slate-500">{restaurant.address ?? 'Dirección no especificada'}</p>
+            <p className="mt-2 text-sm text-slate-600">{restaurant.city ?? 'Ciudad pendiente'}</p>
+            <p className="text-sm text-slate-500">{restaurant.address ?? 'Dirección pendiente'}</p>
           </Link>
         ))}
       </div>

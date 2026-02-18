@@ -110,6 +110,10 @@ export interface Database {
           dish_id: string | null
           user_id: string | null
           rating: number
+          flavor_rating: number | null
+          texture_rating: number | null
+          presentation_rating: number | null
+          value_rating: number | null
           comment: string | null
           created_at: string | null
           updated_at: string | null
@@ -119,6 +123,10 @@ export interface Database {
           dish_id?: string | null
           user_id?: string | null
           rating: number
+          flavor_rating?: number | null
+          texture_rating?: number | null
+          presentation_rating?: number | null
+          value_rating?: number | null
           comment?: string | null
           created_at?: string | null
           updated_at?: string | null
@@ -128,6 +136,10 @@ export interface Database {
           dish_id?: string | null
           user_id?: string | null
           rating?: number
+          flavor_rating?: number | null
+          texture_rating?: number | null
+          presentation_rating?: number | null
+          value_rating?: number | null
           comment?: string | null
           created_at?: string | null
           updated_at?: string | null

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { unstable_noStore as noStore } from 'next/cache'
 import AddDishForm from '@/components/AddDishForm'
@@ -11,6 +12,9 @@ interface RestaurantPageProps {
   params: {
     id: string
   }
+  searchParams?: {
+    sort?: string
+  }
 }
 
 type RestaurantReview = {
@@ -18,6 +22,10 @@ type RestaurantReview = {
   dish_id: string
   user_id: string | null
   rating: number
+  flavor_rating: number | null
+  texture_rating: number | null
+  presentation_rating: number | null
+  value_rating: number | null
   comment: string | null
   created_at: string | null
   profiles: {
@@ -57,8 +65,11 @@ type RestaurantDetail = {
   dishes: RestaurantDish[] | null
 }
 
-export default async function RestaurantDetailPage({ params }: RestaurantPageProps) {
+export default async function RestaurantDetailPage({ params, searchParams }: RestaurantPageProps) {
   noStore()
+  const currentSort = searchParams?.sort === 'rating_asc' || searchParams?.sort === 'rating_desc'
+    ? searchParams.sort
+    : 'rating_desc'
 
   const { data, error } = await supabase
     .from('restaurants')
@@ -86,7 +97,7 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
     dishIds.length > 0
       ? await supabase
           .from('reviews')
-          .select('id, dish_id, user_id, rating, comment, created_at, profiles ( username )')
+          .select('id, dish_id, user_id, rating, flavor_rating, texture_rating, presentation_rating, value_rating, comment, created_at, profiles ( username )')
           .in('dish_id', dishIds)
       : { data: [] as RestaurantReview[] | null }
 
@@ -136,6 +147,18 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
   }))
 
   const sortedDishes = [...dishes].sort((a, b) => {
+    if (currentSort === 'rating_desc') {
+      const leftRating = a.avg_rating ?? -1
+      const rightRating = b.avg_rating ?? -1
+      if (rightRating !== leftRating) return rightRating - leftRating
+    }
+
+    if (currentSort === 'rating_asc') {
+      const leftRating = a.avg_rating ?? 999
+      const rightRating = b.avg_rating ?? 999
+      if (leftRating !== rightRating) return leftRating - rightRating
+    }
+
     const left = a.created_at ? new Date(a.created_at).getTime() : 0
     const right = b.created_at ? new Date(b.created_at).getTime() : 0
     return right - left
@@ -156,10 +179,26 @@ export default async function RestaurantDetailPage({ params }: RestaurantPagePro
       <AddDishForm restaurantId={restaurant.id} />
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">Platos</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Platos</h2>
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <Link
+              href={`/restaurants/${restaurant.id}?sort=rating_desc`}
+              className={`rounded-md border px-2 py-1 ${currentSort === 'rating_desc' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 text-slate-700 hover:border-slate-400'}`}
+            >
+              Más calientes
+            </Link>
+            <Link
+              href={`/restaurants/${restaurant.id}?sort=rating_asc`}
+              className={`rounded-md border px-2 py-1 ${currentSort === 'rating_asc' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 text-slate-700 hover:border-slate-400'}`}
+            >
+              Menos calientes
+            </Link>
+          </div>
+        </div>
         {sortedDishes.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-600">
-            No hay platos todavía.
+            Aún no hay platos en este templo.
           </div>
         )}
         {sortedDishes.map((dish, index) => (
