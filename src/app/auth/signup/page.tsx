@@ -25,6 +25,11 @@ function SignupPageContent() {
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username,
+        },
+      },
     })
 
     if (signupError) {
@@ -35,6 +40,16 @@ function SignupPageContent() {
 
     const user = data.user
     if (!user) {
+      setNotice('Cuenta creada. Revisa tu correo para activar el acceso.')
+      setLoading(false)
+      return
+    }
+
+    // If email confirmation is enabled, signUp can return user without session.
+    // In that case, RLS may block direct profile writes from client.
+    // Profile row is created by DB trigger on auth.users; we only update profile
+    // here when session is already active.
+    if (!data.session) {
       setNotice('Cuenta creada. Revisa tu correo para activar el acceso.')
       setLoading(false)
       return

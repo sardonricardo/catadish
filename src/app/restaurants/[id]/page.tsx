@@ -48,6 +48,7 @@ type RestaurantDish = {
     | {
         id: string
         dish_id: string
+        uploaded_by: string | null
         storage_path: string
         caption: string | null
         is_featured: boolean
@@ -105,7 +106,7 @@ export default async function RestaurantDetailPage({ params, searchParams }: Res
     dishIds.length > 0
       ? await supabase
           .from('dish_photos')
-          .select('id, dish_id, storage_path, caption, is_featured, created_at')
+          .select('id, dish_id, uploaded_by, storage_path, caption, is_featured, created_at')
           .in('dish_id', dishIds)
       : { data: [] as RestaurantDish['dish_photos'] | null }
 

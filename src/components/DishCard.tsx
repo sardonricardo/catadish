@@ -1,8 +1,8 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Flame, Pencil, Trash2 } from 'lucide-react'
+import { Camera, ChevronDown, Flame, ImagePlus, Info, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ensureCurrentUserProfile } from '@/lib/profile'
 import ConfirmModal from '@/components/ConfirmModal'
@@ -37,6 +37,7 @@ interface DishCardProps {
     reviews: DishReview[]
     photos: {
       id: string
+      uploaded_by: string | null
       storage_path: string
       caption: string | null
       is_featured: boolean
@@ -47,6 +48,8 @@ interface DishCardProps {
 }
 
 const dishCategories: DishCategory[] = ['entrante', 'principal', 'postre', 'bebida']
+const ratingLegend =
+  '1: Sin chispa · 2: Coqueteo · 3: Muy juguetón · 4: Arde rico · 5: Éxtasis total'
 
 function getHeatColor(step: number) {
   const t = (step - 1) / 4
@@ -81,6 +84,9 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const reviewAverage = Number(((flavorRating + textureRating + presentationRating + valueRating) / 4).toFixed(1))
 
   const computedAverage = useMemo(() => {
@@ -311,6 +317,42 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
     router.refresh()
   }
 
+  const handleDeletePhoto = async (photoId: string, storagePath: string) => {
+    setError(null)
+    setDeletingPhotoId(photoId)
+
+    const { user, error: profileError } = await ensureCurrentUserProfile()
+    if (!user) {
+      setError(profileError ?? 'Inicia sesión para eliminar fotos.')
+      setDeletingPhotoId(null)
+      router.push('/auth/login')
+      return
+    }
+
+    const { data: deletedRows, error: deleteError } = await supabase
+      .from('dish_photos')
+      .delete()
+      .eq('id', photoId)
+      .eq('uploaded_by', user.id)
+      .select('id')
+
+    if (deleteError) {
+      setError(deleteError.message)
+      setDeletingPhotoId(null)
+      return
+    }
+
+    if (!deletedRows || deletedRows.length === 0) {
+      setError('No tienes permisos para eliminar esta foto.')
+      setDeletingPhotoId(null)
+      return
+    }
+
+    await supabase.storage.from('dish-pics').remove([storagePath])
+    setDeletingPhotoId(null)
+    router.refresh()
+  }
+
   if (isDeleted) {
     return null
   }
@@ -448,21 +490,21 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
         {dish.reviews.map((review) => (
           <div key={review.id} className="rounded-lg bg-slate-50 p-3 text-sm">
             <p className="font-medium text-slate-800">
-              {review.profiles?.username ?? 'Usuario'} · {Number(review.rating).toFixed(1)}/5
+              {review.profiles?.username ?? 'Usuario'} · {Number.isInteger(Number(review.rating)) ? Number(review.rating) : Number(review.rating).toFixed(1)}/5
             </p>
             {(review.flavor_rating || review.texture_rating || review.presentation_rating || review.value_rating) && (
               <div className="mt-1 space-y-0.5 text-xs text-slate-500">
                 <p>
-                  Sabor {review.flavor_rating ?? '-'}{review.flavor_rating ? ` · ${getSensualRatingLabel(review.flavor_rating)}` : ''}
+                  Sabor {review.flavor_rating ?? '-'}
                 </p>
                 <p>
-                  Textura {review.texture_rating ?? '-'}{review.texture_rating ? ` · ${getSensualRatingLabel(review.texture_rating)}` : ''}
+                  Textura {review.texture_rating ?? '-'}
                 </p>
                 <p>
-                  Presentación {review.presentation_rating ?? '-'}{review.presentation_rating ? ` · ${getSensualRatingLabel(review.presentation_rating)}` : ''}
+                  Presentación {review.presentation_rating ?? '-'}
                 </p>
                 <p>
-                  Calidad/precio {review.value_rating ?? '-'}{review.value_rating ? ` · ${getSensualRatingLabel(review.value_rating)}` : ''}
+                  Calidad/precio {review.value_rating ?? '-'}
                 </p>
               </div>
             )}
@@ -478,8 +520,20 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {orderedPhotos.map((photo) => {
               const publicUrl = supabase.storage.from('dish-pics').getPublicUrl(photo.storage_path).data.publicUrl
+              const canDeletePhoto = Boolean(currentUserId && photo.uploaded_by && currentUserId === photo.uploaded_by)
               return (
-                <figure key={photo.id} className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <figure key={photo.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                  {canDeletePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(photo.id, photo.storage_path)}
+                      disabled={deletingPhotoId === photo.id}
+                      className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-md border border-rose-300 bg-white/95 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      {deletingPhotoId === photo.id ? 'Borrando...' : 'Eliminar'}
+                    </button>
+                  )}
                   <img src={publicUrl} alt={photo.caption ?? dish.name} className="h-28 w-full object-cover" />
                   {photo.caption && <figcaption className="p-2 text-xs text-slate-600">{photo.caption}</figcaption>}
                 </figure>
@@ -492,12 +546,39 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
       <form onSubmit={handlePhotoUpload} className="space-y-2 border-t border-slate-200 pt-4">
         <h4 className="text-sm font-semibold text-slate-700">Subir shot</h4>
         <input
+          ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
           onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-slate-600"
+          className="hidden"
         />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+          className="hidden"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
+          >
+            <Camera className="h-4 w-4" />
+            Hacer foto
+          </button>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
+          >
+            <ImagePlus className="h-4 w-4" />
+            Subir de galería
+          </button>
+          {photoFile && <span className="text-xs text-slate-500">{photoFile.name}</span>}
+        </div>
         <label className="block text-sm font-medium text-slate-700">
           Texto
           <input
@@ -519,7 +600,15 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
 
       <form onSubmit={handleReviewSubmit} className="space-y-2 border-t border-slate-200 pt-4">
         <label className="block text-sm font-medium text-slate-700">
-          Tu termómetro del placer
+          <span className="inline-flex items-center gap-2">
+            Tu termómetro del placer
+            <span className="group relative inline-flex">
+              <Info className="h-4 w-4 text-slate-400" />
+              <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm group-hover:block">
+                {ratingLegend}
+              </span>
+            </span>
+          </span>
           <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="space-y-2">
               {[
@@ -551,7 +640,7 @@ export default function DishCard({ dish, initiallyExpanded = false }: DishCardPr
                       })}
                     </div>
                     <span className="text-[11px] font-semibold text-slate-500">
-                      {item.value}/5 · {getSensualRatingLabel(item.value)}
+                      {item.value}/5
                     </span>
                   </div>
                 </div>

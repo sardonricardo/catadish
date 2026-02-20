@@ -1,8 +1,8 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Flame } from 'lucide-react'
+import { Camera, Flame, ImagePlus, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { DishCategory } from '@/lib/database.types'
 import { ensureCurrentUserProfile } from '@/lib/profile'
@@ -13,6 +13,8 @@ interface AddDishFormProps {
 }
 
 const categories: DishCategory[] = ['entrante', 'principal', 'postre', 'bebida']
+const ratingLegend =
+  '1: Sin chispa · 2: Coqueteo · 3: Muy juguetón · 4: Arde rico · 5: Éxtasis total'
 
 function getHeatColor(step: number) {
   const t = (step - 1) / 4
@@ -39,6 +41,8 @@ export default function AddDishForm({ restaurantId }: AddDishFormProps) {
   const [initialComment, setInitialComment] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const initialRatings = [initialFlavorRating, initialTextureRating, initialPresentationRating, initialValueRating]
   const hasAnyInitialRating = initialRatings.some((value) => value > 0)
@@ -218,12 +222,39 @@ export default function AddDishForm({ restaurantId }: AddDishFormProps) {
         <label className="block text-sm font-medium text-slate-700">
           Foto del plato (opcional)
           <input
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
-            className="mt-1 block w-full text-sm text-slate-600"
+            className="hidden"
           />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
+            >
+              <Camera className="h-4 w-4" />
+              Hacer foto
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:border-slate-400"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Subir de galería
+            </button>
+            {photoFile && <span className="text-xs text-slate-500">{photoFile.name}</span>}
+          </div>
         </label>
 
         <label className="block text-sm font-medium text-slate-700">
@@ -239,7 +270,15 @@ export default function AddDishForm({ restaurantId }: AddDishFormProps) {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <p className="text-sm font-medium text-slate-700">Primera chispa (opcional)</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-slate-700">Primera chispa (opcional)</p>
+          <span className="group relative inline-flex">
+            <Info className="h-4 w-4 text-slate-400" />
+            <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm group-hover:block">
+              {ratingLegend}
+            </span>
+          </span>
+        </div>
         <div className="mt-2 space-y-2">
           {[
             { label: 'Sabor', value: initialFlavorRating, setter: setInitialFlavorRating },
@@ -270,7 +309,7 @@ export default function AddDishForm({ restaurantId }: AddDishFormProps) {
                   })}
                 </div>
                 <span className="text-[11px] font-semibold text-slate-500">
-                  {item.value > 0 ? `${item.value}/5 · ${getSensualRatingLabel(item.value)}` : 'Sin nota'}
+                  {item.value > 0 ? `${item.value}/5` : 'Sin nota'}
                 </span>
               </div>
             </div>
