@@ -21,11 +21,17 @@ function SignupPageContent() {
     setError(null)
     setNotice(null)
     setLoading(true)
+    const nextPath = searchParams.get('next')
+    const emailRedirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`
+        : undefined
 
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo,
         data: {
           username,
         },
@@ -68,7 +74,6 @@ function SignupPageContent() {
     }
 
     setNotice('Cuenta lista. Bienvenida/o al club del antojo.')
-    const nextPath = searchParams.get('next')
     router.push(nextPath || '/restaurants')
     router.refresh()
   }
